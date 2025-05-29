@@ -24,7 +24,7 @@ export class OrdersService {
     private toppingRepository: Repository<Topping>
   ){}
 
-  async addOrCreateOrder(createOrderProductDto: CreateOrderProductDto, userId: string) {
+  async addOrCreateOrder(createOrderProductDto: CreateOrderProductDto, userId: string) { //เพิ่มสินค้าในตะกร้า หรือสร้างตะกร้าใหม่ถ้าพึ่งจ่ายตังค์ไปแล้ว order ยังไม่มี
     // เช็คตาราง order ว่ามีตะกร้าที่ยังไม่จ่ายตังค์มั้ย ถ้ามีก็ใช้อันเดิม ถ้าไม่จะสร้างใหม่
     let orderExists = await this.orderRepository
                             .findOne({
@@ -113,12 +113,33 @@ export class OrdersService {
     // ----------------------------------------------------------------------------------------------------------------------
   }
 
-  async getOrder(userId: string) {
+  //อันนี้ใช้ raw sql เพราะมันค่อนข้างเป็นการ query ที่ซับซ้อน
+  async getOrder(userId: string) { //ดูตะกร้าตัวเองว่ามีอะไรบ้าง มีแปะสร้างตะกร้าไว้ด้วย เผื่อไม่มี ไม่ใส่ก็ได้ แต่มันจะส่งว่างเปล่ามา
+    // let orderExists = await this.orderRepository
+    //                         .findOne({
+    //                             where: {
+    //                               status: OrderStatus.PENDING,
+    //                               user: { id: userId }
+    //                             },
+    //                         });  
+    // if(!orderExists){
+    //   const order = this.orderRepository.create({
+    //     total_price: 0,   
+    //     status: OrderStatus.PENDING,
+    //     user: { id: userId }, 
+    //   });
+    //   orderExists = await this.orderRepository.save(order);
+    // }                        
+
     const order = await this.orderRepository.query( //.query จะ return เป็น array เสมอ
       `
-        SELECT
+        SELECT 
+        -- ****o คือ alias ของ order****
+        -- ****เอาแค่ id กับ ราคารวมของ order นั้นๆมา****
           o.id,
           o.total_price,
+
+          -- ****รวมข้อมูลของแต่ละ order_products เข้าเป็น JSON****
           JSON_AGG(
             JSON_BUILD_OBJECT(
               'order_product_id', op.id,
@@ -127,11 +148,13 @@ export class OrdersService {
               'unit_price', op.unit_price,
               'quantity', op.quantity,
               'note', op.note,
+              -- ****ดึงรูปทั้งหมดของสินค้าแต่ละตัว****
               'images', (
                   SELECT JSON_AGG(pi.image_name)
                   FROM ${table.product_image} pi
                   WHERE pi.product_id = p.id
               ),
+              -- ****ดึง topping ทั้งหมดของสินค้านั้น ๆ พร้อมสถานะว่า user เลือกไหม****
               'toppings', (
                   SELECT JSON_AGG(JSON_BUILD_OBJECT(
                       'id', t.id, 
@@ -140,23 +163,36 @@ export class OrdersService {
                       'status', CASE 
                           WHEN opt.order_product_id IS NOT NULL THEN true 
                           ELSE false 
-                      END))
+                      END)) -- ****ตรงนี้เป็นเงื่อนไขน่ะ ต้องดูผลลัพธ์ตอน leftjoin ถ้าเป็น null ให้ส่งฟิลด์ status : false หรือถ้าไม่ null ก็ส่ง true****
+                            -- ****ลองนึกภาพ จากตาราง product_topping ที่เก็บ product.id กับ topping.id ไว้****
+                            -- ****เราเอา topping มา join, ก็จะได้ว่า product_topping แต่ละแถวมีข้อมูลของ topping ว่าคืออะไรบ้าง****
                   FROM ${table.product_topping} pt 
                   LEFT JOIN ${table.topping} t 
                       ON pt.topping_id = t.id
-                  LEFT JOIN ${table.order_product_topping} opt
-                      ON opt.topping_id = t.id 
-                      AND opt.order_product_id = op.id
-                  WHERE pt.product_id = p.id
+                  LEFT JOIN ${table.order_product_topping} opt  -- ****order_product_topping ที่เก็บ order_product.id กับ topping.id ไว้: ลูกค้าเลือก topping อะไรบ้างใน product ที่อยู่ใน order นั้น****
+                      ON opt.topping_id = t.id                  -- ****เรา join ตรงนี้ เพื่อจับคู่ topping****
+                      AND opt.order_product_id = op.id          -- ****ต้อง AND ตรงนี้ ให้รู้ว่า เราสนใจเฉพาะ topping ของ order_product ตัวตัวเดียวกัน****
+                  WHERE pt.product_id = p.id                    -- ****เฉพาะ topping ที่ถูก assign ให้กับ product นี้****
               )
             )
-          ) AS products
+          ) AS products -- ****ตรงเนี้ย จะงงๆหน่อย มันเป็นการเอาข้อมูล product ไป join เป็น subquery เพื่อหา รูปกับ topping ที่มันมี****
+                        -- ****แนะนำให้เชื่อมตารางหลักก่อน คือเอามาจาก order, แล้ว leftjoin กับ order_product แล้วเอา order_product ไป leftjoin กับ product****
+                        -- ****พอเชื่อม product แล้ว ค่อยไป subquery ทีหลังว่าจะ join product กับอะไรบ้าง****
+
+          -- ****ดึงข้อมูลจาก orders****
           FROM ${table.order} o
+
+          -- ****เชื่อมกับ order_products****
           LEFT JOIN ${table.order_product} op
           ON o.id = op.order_id
+
+          -- ****เชื่อมกับ products เพื่อดึงข้อมูลสินค้า****
           LEFT JOIN ${table.product} p 
           ON op.product_id = p.id
+
+          -- ****เงื่อนไข: ต้องเป็น order ที่ยัง pending และเป็นของ user ที่กำหนด****
           WHERE o.status = 'pending' AND o.user_id = $1
+
           GROUP BY o.id
           ORDER BY o.created_at DESC
       `,[userId]
@@ -164,7 +200,7 @@ export class OrdersService {
     return order[0];
   }
 
-  async getAllPaidOrderPriceFromOneUser(userId: string) {
+  async getAllPaidOrderPriceFromOneUser(userId: string) { //ดูค่าใช้จ่ายทั้งหมดของ user คนหนึ่งว่า paid หรือจ่ายตังค์ไปเท่าไหร่แล้ว และสั่งไปกี่ order
     const paidOrderOneUserPrice = await this.orderRepository.query(
       `
         SELECT 
@@ -184,7 +220,7 @@ export class OrdersService {
     return paidOrderOneUserPrice[0];
   }
 
-  async getAllPaidOrderPriceFromAllUser() {
+  async getAllPaidOrderPriceFromAllUser() { //ดูค่าใช้จ่ายทั้งหมดของ user ทุกคนว่า paid หรือจ่ายตังค์ไปเท่าไหร่แล้ว และสั่งไปกี่ order, เดี๋ยว join แล้วดึงข้อมูล user มาโชว์ด้วยก็ดี
     const paidOrderAllUserPrice = await this.orderRepository.query(
       `
         SELECT 
@@ -200,7 +236,8 @@ export class OrdersService {
     return paidOrderAllUserPrice;
   }
 
-  async update(userId: string, updateOrderProductDto: UpdateOrderProductDto) {
+  async update(userId: string, updateOrderProductDto: UpdateOrderProductDto) { //แก้ไขสินค้าในตะกร้า เช่น เปลี่ยน topping หรือจำนวน
+    // เช็คว่านี่เป็น order ของเราหรือไม่
     const isOwnerOfOrder = await this.orderRepository.findOne({
       where: {
         id: updateOrderProductDto.order_id,
@@ -210,6 +247,7 @@ export class OrdersService {
     })
     if(!isOwnerOfOrder) throw new UnauthorizedException('This is not your order');
 
+    // หา Product ที่อยู่ใน order เราจากตาราง OrderProduct ว่ามีหรือไม่จาก id ที่ส่งมา
     const existingOrderProduct = await this.orderProductRepository.findOne({
       where: {
         id: updateOrderProductDto.id,
@@ -217,19 +255,21 @@ export class OrdersService {
       relations: ['orderProductToppings','product','order'],
     });
     if(!existingOrderProduct) throw new NotFoundException('OrderProduct not found');
+
+    // เก็บราคารวมของ product นั้นเอาไว้ก่อน เอาไว้อัพเดตใน order ทีหลัง
     const oldTotalPrice = Number(existingOrderProduct.quantity) * Number(existingOrderProduct.unit_price);
 
-    // 1. ลบ relation เดิมออก
+    // ลบ relation เดิมออก
     existingOrderProduct.orderProductToppings = []; // ตัดความสัมพันธ์ทั้งหมดออก
     await this.orderProductRepository.save(existingOrderProduct); // เซฟเพื่อให้ลบใน DB จริง ๆ
 
-    // 2. ดึง toppings ใหม่ตาม id ที่ส่งมา
-    // if (updateOrderProductDto.toppingIds) {
+    // ดึง toppings ใหม่ตาม id ที่ส่งมา
     const newToppings = await this.toppingRepository.findBy({
-      id: In(updateOrderProductDto.toppingIds),
+      id: In(updateOrderProductDto.toppingIds), //เอา array ที่เก็บ id ของ topping ไปหาในตาราง toppings
     });
-    existingOrderProduct.orderProductToppings = newToppings;
+    existingOrderProduct.orderProductToppings = newToppings; //เติม topping ใหม่ลงไป
 
+    // หาว่ามี product เดียวกันและอยู่ใน order เดียวกันอยู่มั้ย ที่ไม่ใช่ตัวเอง เพื่อเอาไปใช้ในกรณีเปลี่ยน topping แล้วเหมือนกัน
     const anotherSameProduct = await this.orderProductRepository.find({
       where: {
         id: Not(existingOrderProduct.id),
@@ -239,22 +279,30 @@ export class OrdersService {
       relations: ['orderProductToppings'], // จำเป็นต้องดึง relations
     });
 
+    // มี product เดียวกันใน order เดียวกัน
     if (anotherSameProduct.length > 0) {
+      // เอา array มา sorting ตาม id และรวมเป็น string เดียวด้วย join เพื่อเอาไปเทียบว่าเหมือนกันมั้ย
       const normalizeToppingIds = (toppings: Topping[]) =>
         toppings.map(t => t.id).sort().join(',');
 
+      // เอา topping ใหม่ที่พึ่งใส่ลงไปใน existingOrderProduct.orderProductToppings มาเข้าฟังก์ชัน
       const incomingToppingIds = normalizeToppingIds(existingOrderProduct.orderProductToppings);
+
+      // เอา anotherSameProduct ไปเทียบดูว่า string ที่ join แล้วตรงกันหรือไม่
+      // ถ้าตรง ก็จะ return object anotherSameProduct ออกมา ถ้าไม่จะ undefied
       const matchedOrderProduct = anotherSameProduct.find(op =>
         normalizeToppingIds(op.orderProductToppings) === incomingToppingIds
       );
 
+      //ถ้าเกิดมีค่า
       if (matchedOrderProduct) {
         // ลบ existing ตัวเดิม
         await this.orderProductRepository.remove(existingOrderProduct);
-        // รวม quantity แล้วเซฟกลับ
+        // รวม quantity กับตัวที่หาเจอแล้วบันทึก
         matchedOrderProduct.quantity = Number(matchedOrderProduct.quantity) + Number(updateOrderProductDto.quantity);
         await this.orderProductRepository.save(matchedOrderProduct);
 
+        // อัพเดตราคารวมใน order
         await this.orderRepository
         .createQueryBuilder()
         .update(Order)
@@ -264,17 +312,16 @@ export class OrdersService {
 
         return matchedOrderProduct;
 
+        //ถ้าไม่มีค่าหรือ undefied
       } else {
-        // ✅ fallback ถ้าไม่ match
-        await this.orderProductRepository.save(existingOrderProduct);
+        // จะ บันทึก product นี้ลงไปเลย
+        const newOrder = await this.orderProductRepository.save(existingOrderProduct);
 
-        if (updateOrderProductDto.quantity) {
-          existingOrderProduct.quantity = updateOrderProductDto.quantity;
-        }
-        if (updateOrderProductDto.total_price) {
-          existingOrderProduct.unit_price = updateOrderProductDto.total_price / updateOrderProductDto.quantity;
-        }
+        // กำหนดค่า quantity กับ unit_price ตาม require ใน dto
+        existingOrderProduct.quantity = updateOrderProductDto.quantity;
+        existingOrderProduct.unit_price = updateOrderProductDto.total_price / updateOrderProductDto.quantity;
 
+        // อัพเดตราคารวมใน order
         await this.orderRepository
           .createQueryBuilder()
           .update(Order)
@@ -282,20 +329,20 @@ export class OrdersService {
           .where("id = :id", { id: updateOrderProductDto.order_id })
           .execute();
 
-        return await this.orderProductRepository.save(existingOrderProduct);
+        
+        return newOrder;
       }
-    } else {
-       // 3. เซฟความสัมพันธ์ใหม่
+    // ไม่เจอ product เดียวกันใน order นี้แล้ว มีตัวคนอย่างเดียว
+    //***** เหมิอนกรณีที่ topping ไม่เหมือนกันเลย คือบันทึกเป็นอันใหม่ */
+    } else { 
+      // จะ บันทึก product นี้ลงไปเลย
       const newOrder = await this.orderProductRepository.save(existingOrderProduct);
   
-      // 4. อัพเดต field อื่น ๆ ด้วยถ้ามี
-      if (updateOrderProductDto.quantity) {
-        existingOrderProduct.quantity = updateOrderProductDto.quantity;
-      }
-      if (updateOrderProductDto.total_price) {
-        existingOrderProduct.unit_price = updateOrderProductDto.total_price / updateOrderProductDto.quantity;
-      }
+      // กำหนดค่า quantity กับ unit_price ตาม require ใน dto
+      existingOrderProduct.quantity = updateOrderProductDto.quantity;
+      existingOrderProduct.unit_price = updateOrderProductDto.total_price / updateOrderProductDto.quantity;
 
+      // อัพเดตราคารวมใน order
       await this.orderRepository
         .createQueryBuilder()
         .update(Order)
@@ -307,7 +354,8 @@ export class OrdersService {
     }
   }
 
-  async remove(orderProductId: string) {
+  async remove(orderProductId: string) { //ลบสินค้าในตะกร้า
+    // หาว่ามี orderProduct นี้รึเปล่า
     const existingOrderProduct = await this.orderProductRepository.findOne({
       where: {
         id: orderProductId,
@@ -316,8 +364,10 @@ export class OrdersService {
     });
     if(!existingOrderProduct) throw new NotFoundException('OrderProduct not found');
 
+    // ถ้ามีก็ลบทิ้งเลย ง่ายๆ
     await this.orderProductRepository.remove(existingOrderProduct)
 
+    // อัพเดตราคาใน order
     const newOrder = await this.orderRepository
         .createQueryBuilder()
         .update(Order)
@@ -328,7 +378,8 @@ export class OrdersService {
     return newOrder
   }
 
-  async complete(userId: string) {
+  async complete(userId: string) { //จ่ายตังค์ ปิด order
+    //เปลี่ยนสถานะ order เฉยๆว่าจ่ายเงินแล้ว ถ้าซื้อของอีก ก็สร้าง order ใหม่
     return await this.orderRepository.update({
         user: { id: userId },
         status: OrderStatus.PENDING
