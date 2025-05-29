@@ -8,12 +8,7 @@ import { Entity,
 
 import { Order } from "src/orders/entities/order.entity";
 import { table } from "src/configs/database_name";
-
-export enum UserRole{
-    OWNER = 'owner',
-    EMPLOYEE = 'employee',
-    CUSTOMER = 'customer'
-}
+import { UserRole } from "src/auth/enums/role.enum";
 
 @Entity({ name: `${table.user}` })
 export class User {
@@ -44,6 +39,9 @@ export class User {
     @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
     updatedAt: Date;
 
-    @OneToMany(() => Order, order => order.users)
+    @OneToMany(() => Order, order => order.user)
     orders: Order[];
+
+    @Column({ type: 'varchar', length: 255,nullable: true })
+    hashedRefreshToken: string | null;
 }

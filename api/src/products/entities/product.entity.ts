@@ -45,7 +45,7 @@ export class Product {
         joinColumn: { name: 'product_id', referencedColumnName: 'id' },
         inverseJoinColumn: { name: 'topping_id', referencedColumnName: 'id' }
     })
-    toppings:[];
+    toppings:Topping[];
 
     @OneToMany(() => OrderProduct, orderProduct => orderProduct.product)
     orderProducts: OrderProduct

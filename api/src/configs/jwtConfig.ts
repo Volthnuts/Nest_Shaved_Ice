@@ -8,8 +8,3 @@ export default registerAs('jwt', (): JwtModuleOptions => ({
         },
     }),
 );
-
-export type AuthJWTPayload = {
-    id: string,
-    role: string
-};
