@@ -35,5 +35,5 @@ export class Order {
     updatedAt: Date;
 
     @OneToMany(() => OrderProduct, orderProduct => orderProduct.order, { nullable: false })
-    orderProducts: OrderProduct
+    orderProducts: OrderProduct[]
 }

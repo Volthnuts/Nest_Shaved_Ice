@@ -5,6 +5,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { Repository } from 'typeorm';
 import { table } from "src/configs/database_name";
+import { Order } from 'src/orders/entities/order.entity';
+import { OrderProduct } from 'src/order-products/entities/order-product.entity';
+import { OrderStatus } from 'src/auth/enums/role.enum';
 
 @Injectable()
 export class ProductsService {
@@ -12,9 +15,13 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(Order)
+    private orderRepository: Repository<Order>,
+    @InjectRepository(OrderProduct)
+    private orderProductRepository: Repository<OrderProduct>,
   ){}
 
-  create(createProductDto: CreateProductDto) {
+  async create(createProductDto: CreateProductDto) {
     return 'This action adds a new product';
   }
 
@@ -88,12 +95,51 @@ export class ProductsService {
     };
 }
 
-
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(productId: string, updateProductDto: UpdateProductDto) {
+    return `This action updates a #${productId} product`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  async remove(productId: string) {
+    //หา product ที่ต้องการลบที่อยู่ในตะกร้าที่ยัง pending อยู่ เป็น array หลายๆตะกร้า
+    const deleteProductFromPendingOrder = await this.orderProductRepository.find({
+      where: {
+        product: { id: productId },
+        order: { status: OrderStatus.PENDING },
+      },
+      relations: ['order', 'orderProductToppings'],
+    })
+    if (!deleteProductFromPendingOrder.length) return
+
+    // สร้างแผนที่ (Map) เพื่อเก็บยอดเงินที่ต้องลบออกจากแต่ละ Order (ตาม orderId)
+    const priceOfDeletedProduct = new Map<string, number>();
+
+    for (const op of deleteProductFromPendingOrder) {
+      // คำนวณราคารวมของสินค้านี้ (quantity * unit_price)
+      const totalToSubtract = Number(op.quantity) * Number(op.unit_price);
+      const orderId = op.order.id; //เอา id ของ order มาจากแต่ละ orderProduct ที่สินค้านี้อยู่
+
+      // ลบราคานี้ออกจากยอดรวม (ใช้การบวกกับค่าลบทีหลัง)
+      priceOfDeletedProduct.set(
+        orderId,
+        (priceOfDeletedProduct.get(orderId) ?? 0) - totalToSubtract
+      );
+    }
+
+    // // อัปเดตราคา total_price ของแต่ละ Order โดยลบราคาสินค้าที่ถูกลบออก
+    // for (const [orderId, priceToSubtract] of priceOfDeletedProduct.entries()) {
+    //   const order = await this.orderRepository.findOne({ where: { id: orderId } });
+    //   if (!order) continue;
+
+    //   // เพิ่มค่าลบเข้าไป (เท่ากับลดราคาลง)
+    //   const newTotal = Number(order.total_price) + priceToSubtract;
+    //   await this.orderRepository.update(orderId, { total_price: newTotal });
+    // }
+
+    // // ลบ OrderProduct (จะลบ relation ใน JoinTable ด้วย)
+    // // orderProductRepository ซึ่งจะลบทุกความสัมพันธ์ที่ผูกกับ OrderProduct โดยอัตโนมัติ ถ้าคุณได้ตั้งค่า cascade ไว้ถูกต้อง — 
+    // // และในกรณีของ @ManyToMany ที่ใช้ @JoinTable() TypeORM จะจัดการลบจากตารางกลาง (order_product_topping) ให้อัตโนมัติ เมื่อคุณใช้ remove() กับ OrderProduct
+    // await this.orderProductRepository.remove(deleteProductFromPendingOrder)
+
+    return Object.fromEntries(priceOfDeletedProduct)
   }
 }

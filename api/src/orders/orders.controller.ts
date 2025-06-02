@@ -24,23 +24,18 @@ export class OrdersController {
     return this.ordersService.getOrder(req.user.id);
   }
 
-  // @UseGuards(JwTAuthGuard)
+  @UseGuards(JwTAuthGuard)
   @Get('paidOrderOneUser')
   paidOrderOneUser(@Request() req) {
     return this.ordersService.getAllPaidOrderPriceFromOneUser(req.user.id);
   }
 
-  // @UseGuards(JwTAuthGuard)
-  // @Roles(UserRole.OWNER, UserRole.EMPLOYEE)
+  @UseGuards(JwTAuthGuard)
+  @Roles(UserRole.OWNER, UserRole.EMPLOYEE)
   @Get('paidOrderAllUser')
   paidOrderAllUser() {
     return this.ordersService.getAllPaidOrderPriceFromAllUser();
   }
-
-  // @Get('paidOrderOneUser')
-  // addOrCreateOrder(@Request() req) {
-  //   return this.ordersService.addOrCreateOrder(req.user.id);
-  // }
 
   @UseGuards(JwTAuthGuard)
   @Patch('updateProductInOrder')

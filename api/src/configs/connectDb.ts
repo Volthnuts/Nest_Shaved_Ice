@@ -15,5 +15,5 @@ export default registerAs('database', (): TypeOrmModuleOptions => ({
   password: process.env.PG_PASSWORD,
   database: process.env.PG_DATABASE,
   entities: [User, Order, Product, ProductImage, Topping, OrderProduct],
-  synchronize: true,
+  synchronize: false,
 }));
