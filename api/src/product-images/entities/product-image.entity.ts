@@ -17,7 +17,7 @@ export class ProductImage {
 
     @ManyToOne(() => Product, product => product.images)
     @JoinColumn({ name: 'product_id' })
-    image: Product
+    product: Product
 
     @Column({ type: 'varchar', nullable: false, unique: true })
     image_name: string

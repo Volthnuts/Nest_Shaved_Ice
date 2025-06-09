@@ -36,7 +36,7 @@ export class Product {
     @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
     updatedAt: Date;
 
-    @OneToMany(() => ProductImage, productImage => productImage.image)
+    @OneToMany(() => ProductImage, productImage => productImage.product)
     images: ProductImage[];
 
     @ManyToMany(() => Topping, topping => topping.products)

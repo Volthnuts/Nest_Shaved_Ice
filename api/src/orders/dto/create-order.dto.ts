@@ -1,5 +1,5 @@
 import { IsDecimal, IsEnum, IsNotEmpty, IsString } from "class-validator";
-import { OrderStatus } from "src/auth/enums/role.enum";
+import { OrderStatus } from "src/enum/order-enum";
 
 export class CreateOrderDto {    
     @IsNotEmpty({ message: 'Status can not be null' })

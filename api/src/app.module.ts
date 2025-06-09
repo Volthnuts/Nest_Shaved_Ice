@@ -11,9 +11,10 @@ import { ProductsModule } from './products/products.module';
 import { ProductImagesModule } from './product-images/product-images.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderProductsModule } from './order-products/order-products.module';
+import { LogsModule } from './logs/logs.module';
 
 @Module({
-  imports: [ UsersModule, ToppingsModule, ProductsModule, ProductImagesModule, OrdersModule, OrderProductsModule,
+  imports: [ AuthModule,UsersModule, ToppingsModule, ProductsModule, ProductImagesModule, OrdersModule, OrderProductsModule, LogsModule,
     // โหลด .env และตั้งให้ Config ใช้ได้ทั้งระบบ
     // ไม่ใช้ load:[connectDb] เพราะเราจะใช้ forFeature แทน (แบบ type-safe)
     ConfigModule.forRoot({
@@ -39,8 +40,6 @@ import { OrderProductsModule } from './order-products/order-products.module';
         ...configService.get('database'), // หรือ connectDb.KEY ก็ได้
       }),
     }),
-    AuthModule,
-    
   ],
   controllers: [AppController],
   providers: [AppService],

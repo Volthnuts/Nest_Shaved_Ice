@@ -17,9 +17,17 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "migration:create": "npm run build && npm run typeorm -- migration:create src/migrations/InitSchema",
+    "migration:generate": "npm run build && npm run typeorm -- migration:generate -d src/configs/connectDb.ts src/migrations/InitSchema",
+    "migration:run": "npm run build && npm run typeorm -- migration:run -d src/configs/connectDb.ts",
+    "migration:revert": "npm run build && npm run typeorm -- migration:revert -d src/configs/connectDb.ts",
+    "migration:refresh": "npm run build && npm run typeorm -- migration:revert -d src/configs/connectDb.ts && npm run typeorm -- migration:run -d src/configs/connectDb.ts",
+    "seeder": "ts-node -r tsconfig-paths/register src/seeders/run-seeder.ts"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.8.0",
     "@jorgebodega/typeorm-seeding": "^7.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
@@ -47,7 +55,8 @@
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.24"
+    "typeorm": "^0.3.24",
+    "typeorm-extension": "^3.7.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

@@ -56,34 +56,37 @@ export class PdfService {
     }
 
     async signPdfCertificate(pdf:string): Promise<Buffer> {
+        console.log('pdf',pdf)
         const p12Base64 = this.configService.get<string>('CERT_P12_BASE64');
+        const passwordbase64 = this.configService.get<string>('CERT_P12_PASSWORD');
+
         if (!p12Base64) throw new Error('CERT_P12_BASE64 is not defined in environment variables.');
+        if (!passwordbase64) throw new Error('CERT_P12_PASSWORD is not defined in environment variables.');
 
         const p12Buffer = Buffer.from(p12Base64, 'base64');
-        const password = this.configService.get<string>('CERT_P12_PASSWORD');
-        
-        const sanitizedPdf = path.basename(pdf); // ป้องกัน path traversal
-        const filePath = path.join(
-            process.cwd(),
-            `${this.configService.get<string>('PDF_STORAGE_PATH')}/${sanitizedPdf}`
-        );
-        if (!fs.existsSync(filePath)) throw new Error(`PDF file not found at: ${filePath}`);
+        const password = Buffer.from(passwordbase64, 'base64').toString();
 
-        let pdfBuffer = fs.readFileSync(filePath);
+        const envPath = this.configService.get<string>('PDF_STORAGE_PATH');
+        if(!envPath) throw new Error(`Can not config the pdf storage path`);
+
+        const baseStoragePath = path.resolve(process.cwd(), envPath);
+
+        // Normalize and resolve path safely
+        const resolvedFilePath = path.resolve(baseStoragePath, pdf);
+
+        console.log('envPath',envPath)
+        console.log('baseStoragePath',baseStoragePath)
+        console.log('resolvedFilePath',resolvedFilePath)
+
+        // ป้องกัน path traversal
+        if (!resolvedFilePath.startsWith(baseStoragePath)) {
+            throw new Error('Invalid file path (path traversal attempt detected)');
+        }
+
+        if (!fs.existsSync(resolvedFilePath)) throw new Error(`PDF file not found at: ${resolvedFilePath}`);
+
+        let pdfBuffer = fs.readFileSync(resolvedFilePath);
         let originalFileName = path.parse(pdf).name;
-
-        // let pdfBuffer: Buffer;
-        // if (typeof pdf === 'string') {
-        //     // pdf เป็นชื่อไฟล์
-        //     const filePath = path.join(process.cwd(), `${this.configService.get<string>('PDF_STORAGE_PATH')}/${pdf}`);
-        //     pdfBuffer = fs.readFileSync(filePath);
-        // } else if (Buffer.isBuffer(pdf)) {
-        //     // pdf เป็น Buffer อยู่แล้ว
-        //     pdfBuffer = pdf;
-        // } else {
-        //     // ถ้าไม่มี input error
-        //     throw new Error('Invalid input type');
-        // }
 
         var signer = new P12Signer(p12Buffer, { passphrase: password });
 
@@ -105,5 +108,9 @@ export class PdfService {
         fs.writeFileSync(outputPath, signedPdf);
 
         return signedPdf;
+    }
+
+    async uploadPdf(pdf: File) {
+        
     }
 }

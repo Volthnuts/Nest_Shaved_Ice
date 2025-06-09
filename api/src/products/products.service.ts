@@ -7,7 +7,7 @@ import { Repository } from 'typeorm';
 import { table } from "src/configs/database_name";
 import { Order } from 'src/orders/entities/order.entity';
 import { OrderProduct } from 'src/order-products/entities/order-product.entity';
-import { OrderStatus } from 'src/auth/enums/role.enum';
+import { OrderStatus } from 'src/enum/order-enum';
 
 @Injectable()
 export class ProductsService {

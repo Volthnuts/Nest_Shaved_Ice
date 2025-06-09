@@ -2,11 +2,11 @@ import { Get, Inject, Injectable, Req, UnauthorizedException, UseGuards } from '
 import { UsersService } from 'src/users/users.service';
 import { compare } from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { AuthJWTPayload } from 'src/configs/authJwtPayload';
-import refresh_jwtConfig from 'src/configs/refresh_jwtConfig';
+import { AuthJWTPayload } from 'src/auth/configs/authJwtPayload';
+import refresh_jwtConfig from 'src/auth/configs/refresh_jwtConfig';
 import { ConfigType } from '@nestjs/config';
 import * as argon2 from 'argon2';
-import { CurrentUser } from 'src/configs/currentUser';
+import { CurrentUser } from 'src/auth/configs/currentUser';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { CreateGoogleUserDto } from 'src/users/dto/create-user-google.dto';
 

@@ -1,0 +1,17 @@
+# Node modules และ build artifacts
+node_modules
+dist
+npm-debug.log
+*.log
+Dockerfile*
+docker-compose.yml
+
+# Git
+.git
+.gitignore
+
+# Env
+.env
+
+# Markdown docs
+*.md

@@ -3,11 +3,3 @@ export enum UserRole{
     EMPLOYEE = 'employee',
     CUSTOMER = 'customer'
 }
-
-export enum OrderStatus{
-    PENDING = 'pending',
-    PAID = 'paid',
-    PREPARING = 'preparing',
-    DELIVERED = 'delivered',
-    CANCELED = 'canceled'
-}

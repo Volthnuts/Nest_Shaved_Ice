@@ -11,7 +11,7 @@ import { Entity,
 import { User } from "src/users/entities/user.entity";
 import { table } from "src/configs/database_name";
 import { OrderProduct } from "src/order-products/entities/order-product.entity";
-import { OrderStatus } from "src/auth/enums/role.enum";
+import { OrderStatus } from "src/enum/order-enum";
 
 @Entity({ name: `${table.order}` })
 export class Order {
@@ -22,7 +22,12 @@ export class Order {
     @JoinColumn({ name: 'user_id' })
     user: User;
 
-    @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
+    @Column({
+            type: 'enum',
+            enum: OrderStatus,
+            enumName: 'orders_status_enum',      // ชื่อ ENUM ใน PostgreSQL
+            default: OrderStatus.PENDING 
+    })
     status: OrderStatus
 
     @Column({ type: 'decimal',default: 0 })
