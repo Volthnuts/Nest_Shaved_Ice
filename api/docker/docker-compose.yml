@@ -1,0 +1,54 @@
+# api/src/dockerfile/Dockerfile.app api/src/dockerfile/Dockerfile.postgres# context: ../ หมายถึงให้ docker build เริ่มต้นที่ src/ ซึ่งมีโค้ดทุกอย่าง
+services:
+  postgres:
+    build:
+      context: ..      # โค้ด NestJS อยู่ที่นี่ **. คือโฟลเดอร์ปัจจุบัน .. คือย้อนกลับไป 1 ขั้น ซึ่งเป็นที่อยู่ของ app เรา(folder api)
+      dockerfile: docker/Dockerfile.postgres      # path ไปยัง dockerfile
+    image: volthnuts/postgres_shaved_ice
+    container_name: nest_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nest_shaved_ice
+      POSTGRES_DB: nest_shaved_ice
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5431:5432"
+
+  nestjs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.app
+      target: production
+    image: volthnuts/nest_shaved_ice
+    container_name: nest_app
+    ports:
+      - "3000:3000"  # เปิด API ที่พอร์ต 3000
+    # volumes:
+    #   - .:/usr/src/app  
+    working_dir: /usr/src/app
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+    # command: npm run start:dev  # ใช้แบบนี้แทน CMD ใน Dockerfile
+    command: node dist/main.js
+
+volumes:
+  pgdata:
+
+# ------------------------------------------------------
+
+# env_file:
+#   - .env           # ค่าพื้นฐาน
+#   - .env.production  # ค่าที่ override ของ production
+# project-root/
+# ├── docker-compose.yml
+# ├── .env
+# ├── .env.production
+# └── ...
+
+
+# env_file:
+#   - ./env/.base.env
+#   - ./env/.dev.env

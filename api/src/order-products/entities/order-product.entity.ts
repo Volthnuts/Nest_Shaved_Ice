@@ -47,6 +47,6 @@ export class OrderProduct {
         joinColumn: { name: 'order_product_id', referencedColumnName: 'id' },
         inverseJoinColumn: { name: 'topping_id', referencedColumnName: 'id' }
     })
-    orderProductToppings:[];
+    orderProductToppings: Topping[];
 }
 

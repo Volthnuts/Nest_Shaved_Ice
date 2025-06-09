@@ -1,0 +1,9 @@
+# Dockerfile
+FROM postgres:15
+
+# (Optional) copy config or init script
+# COPY ./init.sql /docker-entrypoint-initdb.d/
+
+# ถ้าไม่มีอะไรพิเศษ ก็ไม่ต้องใส่ CMD เพราะ postgres official image มีอยู่แล้ว
+# แต่ถ้ากลัวลืม/งงก็ใส่ไว้ชัดเจนได้
+CMD ["postgres"]

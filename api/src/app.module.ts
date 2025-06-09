@@ -2,13 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { OrderProduct } from './order-products/entities/order-product.entity';
-import { User } from './users/entities/user.entity';
-import { Order } from './orders/entities/order.entity';
-import { ProductImage } from './product-images/entities/product-image.entity';
-import { Product } from './products/entities/product.entity';
-import { Topping } from './toppings/entities/topping.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import connectDb from './configs/connectDb';
 import { UsersModule } from './users/users.module';
@@ -17,9 +11,10 @@ import { ProductsModule } from './products/products.module';
 import { ProductImagesModule } from './product-images/product-images.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderProductsModule } from './order-products/order-products.module';
+import { LogsModule } from './logs/logs.module';
 
 @Module({
-  imports: [ UsersModule, ToppingsModule, ProductsModule, ProductImagesModule, OrdersModule, OrderProductsModule,
+  imports: [ AuthModule,UsersModule, ToppingsModule, ProductsModule, ProductImagesModule, OrdersModule, OrderProductsModule, LogsModule,
     // โหลด .env และตั้งให้ Config ใช้ได้ทั้งระบบ
     // ไม่ใช้ load:[connectDb] เพราะเราจะใช้ forFeature แทน (แบบ type-safe)
     ConfigModule.forRoot({
@@ -45,8 +40,6 @@ import { OrderProductsModule } from './order-products/order-products.module';
         ...configService.get('database'), // หรือ connectDb.KEY ก็ได้
       }),
     }),
-    AuthModule,
-    
   ],
   controllers: [AppController],
   providers: [AppService],
