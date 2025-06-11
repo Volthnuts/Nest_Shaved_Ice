@@ -39,5 +39,9 @@ COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/package*.json ./
 COPY --from=build /usr/src/app/package*.json ./
+
+# เพิ่มบรรทัดนี้เพื่อให้ Render รู้ว่ารันที่ port ไหน
+EXPOSE 3000
+
 # รันแอปจาก dist/main.js
 CMD ["node", "dist/main.js"]
