@@ -51,11 +51,11 @@ export class UsersController {
           'Content-Disposition': 'attachment; filename=signed.pdf',
         });
 
-        await this.logService.logSingPdf(req.user.id,action,pdf,true)
+        await this.logService.logSignPdf(req.user.id,action,pdf,true)
         res.send(signed);
 
       } catch (error) {
-        await this.logService.logSingPdf(req.user.id,action,pdf,false,error)
+        await this.logService.logSignPdf(req.user.id,action,pdf,false,error)
         return res.status(500).json({
           message: 'Can not sign pdf',
         })
